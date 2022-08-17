@@ -37,6 +37,18 @@
 //  Example implementation to utilise IO based registers for Bidirectional IO
 //  in Nexus family.
 // 
+//  Requirements:
+//    1. bidi_ireg, bidi_oreg, bidi_treg must all share a common clock, reset
+//       and clock enable (optional)
+//    2. No combinatorial logic between final FF and Bidirectional pin
+//    3. Tristate Control signal needs to be the same width as the
+//       bidirectional signal. If the tristate reg is not being pushed into
+//       the IO check that the tristate control signal is not being optimised
+//       during synthesis. The syn_keep attributes used below are intended to
+//       prevent this.
+//    4. Since GSR usage can significantly complicate meeting the reset
+//       requirements, it is recommended to disable GSR inference via Strategy
+//       Settings.
 // --------------------------------------------------------------------
 //
 // Revision History :
@@ -53,7 +65,7 @@ module nexus_bidi_ioff # (
   input   wire               clk,
   input   wire               rstn,
   input   wire               go,
-  input   wire [7:0]         data_bidi
+  inout   wire [DWIDTH-1:0]  data_bidi
 );
 
   // State Declarations
@@ -65,12 +77,12 @@ module nexus_bidi_ioff # (
   reg  [1:0]                 state;
 
   // Tri-State Enable signal - same width as data
-  reg  [DWIDTH-1:0]          ts_en;
+  reg  [DWIDTH-1:0]          ts_en /* synthesis syn_keep=1 */;
 
   // FIFO Signals
   reg                        fifo_re;
   reg                        fifo_we;
-  reg  [DWIDTH-1:0]          fifo_wdata;
+  reg  [DWIDTH-1:0]          bidi_ireg;
   wire [DWIDTH-1:0]          fifo_rdata;
   wire                       fifo_afull;
   wire                       fifo_aempty;
@@ -81,55 +93,17 @@ module nexus_bidi_ioff # (
   reg  [DWIDTH-1:0]          fifo_wdata_r;
   reg  [DWIDTH-1:0]          fifo_wdata_rr;
   reg  [DWIDTH-1:0]          fifo_rdata_r;
-  reg  [DWIDTH-1:0]          fifo_rdata_rr;
-
-always @(posedge clk or negedge rstn)
-  if (~rstn) begin
-    ts_en                    <= {DWIDTH{1'b1}};
-    fifo_re                  <= 1'b0;
-    fifo_we                  <= 1'b0;
-    state                    <= IDLE;
-  end else begin
-    case (state)
-      IDLE : begin
-        if (go) begin
-          ts_en              <= {DWIDTH{1'b1}};
-          state              <= INPUT;
-        end else begin
-          state              <= IDLE;
-        end
-      end
-      INPUT : begin
-        if (~fifo_full) begin
-          fifo_we            <= 1'b1;
-          state              <= INPUT;
-        end else begin
-          fifo_we            <= 1'b0;
-          ts_en              <= 0;
-          state              <= OUTPUT;
-        end
-      end
-      OUTPUT : begin
-        if (~fifo_empty) begin
-          fifo_re            <= 1'b1;
-          state              <= OUTPUT;
-        end else begin
-          fifo_we            <= 1'b0;
-          state              <= IDLE;
-        end
-      end
-      default : begin
-        state                <= IDLE;
-      end
-    endcase
-  end
+  reg  [DWIDTH-1:0]          bidi_oreg;
+  reg  [DWIDTH-1:0]          ts_en_r /* synthesis syn_keep=1 */;
+  reg  [DWIDTH-1:0]          bidi_treg /* synthesis syn_keep=1 */;
 
   // Register Bidi Input
   always @(posedge clk or negedge rstn)
     if (~rstn) begin
-      fifo_wdata             <= 0;
+      bidi_ireg              <= 0;
     end else begin
-      fifo_wdata             <= data_bidi;
+      // Requirement: Read Bidi Input directly into FF (no combinatorial logic)
+      bidi_ireg              <= data_bidi;
     end
 
   // Pipeline Bidi Input to improve timing
@@ -138,7 +112,7 @@ always @(posedge clk or negedge rstn)
       fifo_wdata_r           <= 0;
       fifo_wdata_rr          <= 0;
     end else begin
-      fifo_wdata_r           <= fifo_wdata;
+      fifo_wdata_r           <= bidi_ireg;
       fifo_wdata_rr          <= fifo_wdata_r;
     end
 
@@ -146,13 +120,72 @@ always @(posedge clk or negedge rstn)
   always @(posedge clk or negedge rstn)
     if (~rstn) begin
       fifo_rdata_r           <= 0;
-      fifo_rdata_rr          <= 0;
+      bidi_oreg              <= 0;
     end else begin
       fifo_rdata_r           <= fifo_rdata;
-      fifo_rdata_rr          <= fifo_rdata_r;
+      bidi_oreg              <= fifo_rdata_r;
     end
 
-  assign data_bidi           = (ts_en) ? 1'bz : fifo_rdata_rr;
+  // Pipeline TriState Control to improve timing
+  always @(posedge clk or negedge rstn)
+    if (~rstn) begin
+      ts_en_r                <= {DWIDTH{1'b0}};
+      bidi_treg              <= {DWIDTH{1'b0}};
+    end else begin
+      ts_en_r                <= ts_en;
+      bidi_treg              <= ts_en_r;
+    end
+
+  // Bidirectional output control - implement bit-by-bit to simplify reg push
+  // into FF
+  generate
+    genvar i;
+
+    for (i=0; i<DWIDTH; i=i+1) begin
+      assign data_bidi[i]    = (bidi_treg[i]) ? 1'bz : bidi_oreg[i];
+    end
+  endgenerate
+
+  always @(posedge clk or negedge rstn)
+    if (~rstn) begin
+      ts_en                  <= {DWIDTH{1'b1}};
+      fifo_re                <= 1'b0;
+      fifo_we                <= 1'b0;
+      state                  <= IDLE;
+    end else begin
+      case (state)
+        IDLE : begin
+          if (go) begin
+            ts_en            <= {DWIDTH{1'b1}};
+            state            <= INPUT;
+          end else begin
+            state            <= IDLE;
+          end
+        end
+        INPUT : begin
+          if (~fifo_full) begin
+            fifo_we          <= 1'b1;
+            state            <= INPUT;
+          end else begin
+            fifo_we          <= 1'b0;
+            ts_en            <= 0;
+            state            <= OUTPUT;
+          end
+        end
+        OUTPUT : begin
+          if (~fifo_empty) begin
+            fifo_re          <= 1'b1;
+            state            <= OUTPUT;
+          end else begin
+            fifo_we          <= 1'b0;
+            state            <= IDLE;
+          end
+        end
+        default : begin
+          state              <= IDLE;
+        end
+      endcase
+    end
 
   pmi_fifo #(
     .pmi_data_width          (DWIDTH), // integer       
