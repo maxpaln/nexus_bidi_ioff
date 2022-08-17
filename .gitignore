@@ -1,0 +1,32 @@
+# Exclude files/folders in same directory as the .gitignore file
+/*
+
+# Permit some files
+!.gitignore
+!.vimsession
+!version.txt
+!mk_release.bash
+!README.md
+
+# Exclude ALL GVIM Temp Files
+**.swl
+**.swm
+**.swo
+**.swp
+**.*~
+
+# Include Radiant Project Files
+!/radiant/
+/radiant/*
+!/radiant/nexus_bidi_ioff/
+/radiant/nexus_bidi_ioff/*
+!/radiant/nexus_bidi_ioff/*.sdc
+!/radiant/nexus_bidi_ioff/*.fdc
+!/radiant/nexus_bidi_ioff/*.pdc
+!/radiant/nexus_bidi_ioff/*.rdf
+!/radiant/nexus_bidi_ioff/*.sty
+
+# Include RTL Source
+!/source/
+/source/*
+!/source/*.v

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RadiantProject version="4.2" radiant="3.2.1.217.3" title="nexus_bidi_ioff" device="LFCPNX-100-9BBG484C" performance_grade="9_High-Performance_1.0V" default_implementation="impl_1">
+    <Options/>
+    <Implementation title="impl_1" dir="impl_1" description="impl_1" synthesis="synplify" default_strategy="Strategy1">
+        <Options/>
+    </Implementation>
+    <Strategy name="Strategy1" file="nexus_bidi_ioff1.sty"/>
+</RadiantProject>
