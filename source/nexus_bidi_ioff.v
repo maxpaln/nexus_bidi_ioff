@@ -82,7 +82,7 @@ module nexus_bidi_ioff # (
   // FIFO Signals
   reg                        fifo_re;
   reg                        fifo_we;
-  reg  [DWIDTH-1:0]          bidi_ireg;
+  reg  [DWIDTH-1:0]          bidi_ireg /* synthesis syn_useioff=1 */;
   wire [DWIDTH-1:0]          fifo_rdata;
   wire                       fifo_afull;
   wire                       fifo_aempty;
@@ -93,9 +93,9 @@ module nexus_bidi_ioff # (
   reg  [DWIDTH-1:0]          fifo_wdata_r;
   reg  [DWIDTH-1:0]          fifo_wdata_rr;
   reg  [DWIDTH-1:0]          fifo_rdata_r;
-  reg  [DWIDTH-1:0]          bidi_oreg;
+  reg  [DWIDTH-1:0]          bidi_oreg /* synthesis syn_useioff=1 */;
   reg  [DWIDTH-1:0]          ts_en_r /* synthesis syn_keep=1 */;
-  reg  [DWIDTH-1:0]          bidi_treg /* synthesis syn_keep=1 */;
+  reg  [DWIDTH-1:0]          bidi_treg /* synthesis syn_keep=1 syn_useioff=1 */;
 
   // Register Bidi Input
   always @(posedge clk or negedge rstn)
