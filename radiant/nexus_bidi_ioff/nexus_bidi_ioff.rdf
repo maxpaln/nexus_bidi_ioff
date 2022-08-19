@@ -6,6 +6,9 @@
         <Source name="../../source/nexus_bidi_ioff.v" type="Verilog" type_short="Verilog">
             <Options top_module="nexus_bidi_ioff"/>
         </Source>
+        <Source name="synplify_pre_synth.fdc" type="Synplify Design Constraints File" type_short="FDC">
+            <Options/>
+        </Source>
     </Implementation>
     <Strategy name="Strategy1" file="nexus_bidi_ioff1.sty"/>
 </RadiantProject>
