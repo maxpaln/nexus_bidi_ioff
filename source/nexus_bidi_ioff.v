@@ -38,23 +38,31 @@
 //  in Nexus family.
 // 
 //  Requirements:
-//    1. bidi_ireg, bidi_oreg, bidi_treg must all share a common clock, reset
-//       and clock enable (optional)
+//    1. bidi_ireg, bidi_oreg, bidi_treg must all share a common clock. If
+//       implemented, the reset and clock enable most also be common to all
+//       FFs. i.e. a Clock Enable is not mandatory, but if a clock enable is
+//       used there cannot be different clock enables for each FF.
 //    2. No combinatorial logic between final FF and Bidirectional pin
 //    3. Tristate Control signal needs to be the same width as the
-//       bidirectional signal. If the tristate reg is not being pushed into
-//       the IO check that the tristate control signal is not being optimised
+//       bidirectional signal.
+//
+//  NOTES:
+//
+//  - If the user is finding the tristate reg is not being pushed into
+//       the IO, check that the tristate control signal is not being optimised
 //       during synthesis. The syn_keep attributes used below are intended to
 //       prevent this.
-//    4. Since GSR usage can significantly complicate meeting the reset
-//       requirements, it is recommended to disable GSR inference via Strategy
-//       Settings.
+//  - Since GSR usage can significantly complicate meeting the reset requirements
+//       it is recommended to disable GSR inference via Strategy Settings.
+//
 // --------------------------------------------------------------------
 //
 // Revision History :
 // --------------------------------------------------------------------
 //   Ver  :| Author            :| Mod. Date :| Changes Made:
-//   V1.0 :| MHoldsworth       :| 28/03/22  :| First Release
+//   v1.0 :| MHoldsworth       :| 17/08/22  :| First Release
+//   v1.1 :| MHoldsworth       :| 19/08/22  :| Fixed Tristate Register Push into IO FF
+//
 // --------------------------------------------------------------------
 
 module nexus_bidi_ioff # (
@@ -65,7 +73,7 @@ module nexus_bidi_ioff # (
   input   wire               clk,
   input   wire               rstn,
   input   wire               go,
-  inout   wire [DWIDTH-1:0]  data_bidi
+  inout   wire [DWIDTH-1:0]  data_bidi /* synthesis syn_useioff = 0 */
 );
 
   // State Declarations
@@ -82,7 +90,7 @@ module nexus_bidi_ioff # (
   // FIFO Signals
   reg                        fifo_re;
   reg                        fifo_we;
-  reg  [DWIDTH-1:0]          bidi_ireg /* synthesis syn_useioff=1 */;
+  reg  [DWIDTH-1:0]          bidi_ireg /* synthesis syn_useioff = 0 */;
   wire [DWIDTH-1:0]          fifo_rdata;
   wire                       fifo_afull;
   wire                       fifo_aempty;
@@ -93,9 +101,9 @@ module nexus_bidi_ioff # (
   reg  [DWIDTH-1:0]          fifo_wdata_r;
   reg  [DWIDTH-1:0]          fifo_wdata_rr;
   reg  [DWIDTH-1:0]          fifo_rdata_r;
-  reg  [DWIDTH-1:0]          bidi_oreg /* synthesis syn_useioff=1 */;
+  reg  [DWIDTH-1:0]          bidi_oreg /* synthesis syn_useioff = 0 */;
   reg  [DWIDTH-1:0]          ts_en_r /* synthesis syn_keep=1 */;
-  reg  [DWIDTH-1:0]          bidi_treg /* synthesis syn_keep=1 syn_useioff=1 */;
+  reg  [DWIDTH-1:0]          bidi_treg /* synthesis syn_useioff = 0 */;
 
   // Register Bidi Input
   always @(posedge clk or negedge rstn)
