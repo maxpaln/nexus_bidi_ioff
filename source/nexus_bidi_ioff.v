@@ -62,7 +62,11 @@
 //   Ver  :| Author            :| Mod. Date :| Changes Made:
 //   v1.0 :| MHoldsworth       :| 17/08/22  :| First Release
 //   v1.1 :| MHoldsworth       :| 19/08/22  :| Fixed Tristate Register Push into IO FF
-//
+//   v1.2 :| Matt Holdsworth   :| 04/09/25  :| Added some clarifications based on Radiant 
+//        :|                   :|           :| 2025.1. syn_useioff seems to have no effect. 
+//        :|                   :|           :| Decision on whether a FF is pushed into the
+//        :|                   :|           :| IO is based on RTL coding style. User can
+//        :|                   :|           :| pull the FF back into the fabric with syn_keep.
 // --------------------------------------------------------------------
 
 module nexus_bidi_ioff # (
@@ -73,7 +77,7 @@ module nexus_bidi_ioff # (
   input   wire               clk,
   input   wire               rstn,
   input   wire               go,
-  inout   wire [DWIDTH-1:0]  data_bidi /* synthesis syn_useioff = 0 */
+  inout   wire [DWIDTH-1:0]  data_bidi
 );
 
   // State Declarations
@@ -90,7 +94,7 @@ module nexus_bidi_ioff # (
   // FIFO Signals
   reg                        fifo_re;
   reg                        fifo_we;
-  reg  [DWIDTH-1:0]          bidi_ireg /* synthesis syn_useioff = 0 */;
+  reg  [DWIDTH-1:0]          bidi_ireg /* synthesis syn_useioff = 1 */;
   wire [DWIDTH-1:0]          fifo_rdata;
   wire                       fifo_afull;
   wire                       fifo_aempty;
@@ -101,9 +105,12 @@ module nexus_bidi_ioff # (
   reg  [DWIDTH-1:0]          fifo_wdata_r;
   reg  [DWIDTH-1:0]          fifo_wdata_rr;
   reg  [DWIDTH-1:0]          fifo_rdata_r;
-  reg  [DWIDTH-1:0]          bidi_oreg /* synthesis syn_useioff = 0 */;
+//  reg  [DWIDTH-1:0]          bidi_oreg;
+//  reg  [DWIDTH-1:0]          bidi_oreg /* synthesis syn_useioff = 1 */; // This has no effect
+//  reg  [DWIDTH-1:0]          bidi_oreg /* synthesis syn_useioff = 0 */; // This has no effect
+//  reg  [DWIDTH-1:0]          bidi_oreg /* synthesis syn_keep = 1 */; // This will force the FF out of the IO Logic and back into the fabric
   reg  [DWIDTH-1:0]          ts_en_r /* synthesis syn_keep=1 */;
-  reg  [DWIDTH-1:0]          bidi_treg /* synthesis syn_useioff = 0 */;
+  reg  [DWIDTH-1:0]          bidi_treg /* synthesis syn_useioff = 1 */;
 
   // Register Bidi Input
   always @(posedge clk or negedge rstn)
